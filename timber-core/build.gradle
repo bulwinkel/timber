@@ -1,0 +1,10 @@
+apply plugin: 'java'
+
+//noinspection GroovyUnusedAssignment
+sourceCompatibility = JavaVersion.VERSION_1_7
+//noinspection GroovyUnusedAssignment
+targetCompatibility = JavaVersion.VERSION_1_7
+
+dependencies {
+  compile 'org.jetbrains:annotations-java5:15.0'
+}

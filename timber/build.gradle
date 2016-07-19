@@ -37,6 +37,9 @@ configurations {
 }
 
 dependencies {
+
+  compile(project(":timber-core"))
+
   provided 'org.jetbrains:annotations:13.0'
 
   testCompile deps.festandroid

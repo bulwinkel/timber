@@ -1,19 +1,24 @@
 package timber.log;
 
-import android.util.Log;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.jetbrains.annotations.NonNls;
 
 import static java.util.Collections.unmodifiableList;
 
 /** Logging for lazy people. */
 public final class Timber {
+
+  public static final int VERBOSE = 2;
+  public static final int DEBUG = 3;
+  public static final int INFO = 4;
+  public static final int WARN = 5;
+  public static final int ERROR = 6;
+  public static final int ASSERT = 7;
+
   /** Log a verbose message with optional format args. */
   public static void v(@NonNls String message, Object... args) {
     TREE_OF_SOULS.v(message, args);
@@ -308,62 +313,62 @@ public final class Timber {
 
     /** Log a verbose message with optional format args. */
     public void v(String message, Object... args) {
-      prepareLog(Log.VERBOSE, null, message, args);
+      prepareLog(VERBOSE, null, message, args);
     }
 
     /** Log a verbose exception and a message with optional format args. */
     public void v(Throwable t, String message, Object... args) {
-      prepareLog(Log.VERBOSE, t, message, args);
+      prepareLog(VERBOSE, t, message, args);
     }
 
     /** Log a debug message with optional format args. */
     public void d(String message, Object... args) {
-      prepareLog(Log.DEBUG, null, message, args);
+      prepareLog(DEBUG, null, message, args);
     }
 
     /** Log a debug exception and a message with optional format args. */
     public void d(Throwable t, String message, Object... args) {
-      prepareLog(Log.DEBUG, t, message, args);
+      prepareLog(DEBUG, t, message, args);
     }
 
     /** Log an info message with optional format args. */
     public void i(String message, Object... args) {
-      prepareLog(Log.INFO, null, message, args);
+      prepareLog(INFO, null, message, args);
     }
 
     /** Log an info exception and a message with optional format args. */
     public void i(Throwable t, String message, Object... args) {
-      prepareLog(Log.INFO, t, message, args);
+      prepareLog(INFO, t, message, args);
     }
 
     /** Log a warning message with optional format args. */
     public void w(String message, Object... args) {
-      prepareLog(Log.WARN, null, message, args);
+      prepareLog(WARN, null, message, args);
     }
 
     /** Log a warning exception and a message with optional format args. */
     public void w(Throwable t, String message, Object... args) {
-      prepareLog(Log.WARN, t, message, args);
+      prepareLog(WARN, t, message, args);
     }
 
     /** Log an error message with optional format args. */
     public void e(String message, Object... args) {
-      prepareLog(Log.ERROR, null, message, args);
+      prepareLog(ERROR, null, message, args);
     }
 
     /** Log an error exception and a message with optional format args. */
     public void e(Throwable t, String message, Object... args) {
-      prepareLog(Log.ERROR, t, message, args);
+      prepareLog(ERROR, t, message, args);
     }
 
     /** Log an assert message with optional format args. */
     public void wtf(String message, Object... args) {
-      prepareLog(Log.ASSERT, null, message, args);
+      prepareLog(ASSERT, null, message, args);
     }
 
     /** Log an assert exception and a message with optional format args. */
     public void wtf(Throwable t, String message, Object... args) {
-      prepareLog(Log.ASSERT, t, message, args);
+      prepareLog(ASSERT, t, message, args);
     }
 
     /** Log at {@code priority} a message with optional format args. */
@@ -418,7 +423,7 @@ public final class Timber {
     /**
      * Write a log message to its destination. Called for all level-specific methods by default.
      *
-     * @param priority Log level. See {@link Log} for constants.
+     * @param priority Log level. See {@link Timber} for constants, which marry up to constants in Android Log class
      * @param tag Explicit or inferred tag. May be {@code null}.
      * @param message Formatted log message. May be {@code null}, but then {@code t} will not be.
      * @param t Accompanying exceptions. May be {@code null}, but then {@code message} will not be.
@@ -426,76 +431,4 @@ public final class Timber {
     protected abstract void log(int priority, String tag, String message, Throwable t);
   }
 
-  /** A {@link Tree Tree} for debug builds. Automatically infers the tag from the calling class. */
-  public static class DebugTree extends Tree {
-    private static final int MAX_LOG_LENGTH = 4000;
-    private static final int CALL_STACK_INDEX = 5;
-    private static final Pattern ANONYMOUS_CLASS = Pattern.compile("(\\$\\d+)+$");
-
-    /**
-     * Extract the tag which should be used for the message from the {@code element}. By default
-     * this will use the class name without any anonymous class suffixes (e.g., {@code Foo$1}
-     * becomes {@code Foo}).
-     * <p>
-     * Note: This will not be called if a {@linkplain #tag(String) manual tag} was specified.
-     */
-    protected String createStackElementTag(StackTraceElement element) {
-      String tag = element.getClassName();
-      Matcher m = ANONYMOUS_CLASS.matcher(tag);
-      if (m.find()) {
-        tag = m.replaceAll("");
-      }
-      return tag.substring(tag.lastIndexOf('.') + 1);
-    }
-
-    @Override final String getTag() {
-      String tag = super.getTag();
-      if (tag != null) {
-        return tag;
-      }
-
-      // DO NOT switch this to Thread.getCurrentThread().getStackTrace(). The test will pass
-      // because Robolectric runs them on the JVM but on Android the elements are different.
-      StackTraceElement[] stackTrace = new Throwable().getStackTrace();
-      if (stackTrace.length <= CALL_STACK_INDEX) {
-        throw new IllegalStateException(
-            "Synthetic stacktrace didn't have enough elements: are you using proguard?");
-      }
-      return createStackElementTag(stackTrace[CALL_STACK_INDEX]);
-    }
-
-    /**
-     * Break up {@code message} into maximum-length chunks (if needed) and send to either
-     * {@link Log#println(int, String, String) Log.println()} or
-     * {@link Log#wtf(String, String) Log.wtf()} for logging.
-     *
-     * {@inheritDoc}
-     */
-    @Override protected void log(int priority, String tag, String message, Throwable t) {
-      if (message.length() < MAX_LOG_LENGTH) {
-        if (priority == Log.ASSERT) {
-          Log.wtf(tag, message);
-        } else {
-          Log.println(priority, tag, message);
-        }
-        return;
-      }
-
-      // Split by line, then ensure each line can fit into Log's maximum length.
-      for (int i = 0, length = message.length(); i < length; i++) {
-        int newline = message.indexOf('\n', i);
-        newline = newline != -1 ? newline : length;
-        do {
-          int end = Math.min(newline, i + MAX_LOG_LENGTH);
-          String part = message.substring(i, end);
-          if (priority == Log.ASSERT) {
-            Log.wtf(tag, part);
-          } else {
-            Log.println(priority, tag, part);
-          }
-          i = end;
-        } while (i < newline);
-      }
-    }
-  }
 }

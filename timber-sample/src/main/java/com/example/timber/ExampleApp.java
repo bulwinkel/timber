@@ -2,16 +2,15 @@ package com.example.timber;
 
 import android.app.Application;
 import android.util.Log;
+import timber.log.AndroidDebugTree;
 import timber.log.Timber;
-
-import static timber.log.Timber.DebugTree;
 
 public class ExampleApp extends Application {
   @Override public void onCreate() {
     super.onCreate();
 
     if (BuildConfig.DEBUG) {
-      Timber.plant(new DebugTree());
+      Timber.plant(new AndroidDebugTree());
     } else {
       Timber.plant(new CrashReportingTree());
     }
